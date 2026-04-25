@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OfferSense — Decode Your Salary</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<nav>
+  <div class="logo">Offer<span>Sense</span></div>
+  <div class="nav-tabs" role="tablist">
+    <button class="nav-tab active" id="tab-breakdown" role="tab" aria-selected="true" aria-controls="page-breakdown" onclick="showPage('breakdown')">💰 Breakdown</button>
+    <button class="nav-tab" id="tab-compare" role="tab" aria-selected="false" aria-controls="page-compare" onclick="showPage('compare')">⚖️ Compare</button>
+    <button class="nav-tab" id="tab-hike" role="tab" aria-selected="false" aria-controls="page-hike" onclick="showPage('hike')">📈 Hike</button>
+    <button class="nav-tab" id="tab-insights" role="tab" aria-selected="false" aria-controls="page-insights" onclick="showPage('insights')">📊 Insights</button>
+    <button class="nav-tab" id="tab-glossary" role="tab" aria-selected="false" aria-controls="page-glossary" onclick="showPage('glossary')">📖 Glossary</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- PAGE 1: BREAKDOWN -->
+  <div class="page active" id="page-breakdown" role="tabpanel" aria-labelledby="tab-breakdown">
+    <div class="page-header">
+      <h1>CTC → <span>In-Hand</span> Breakdown</h1>
+      <p>Enter your offer CTC and get a real monthly in-hand estimate with all deductions explained.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Your Offer Details</div>
+      <div class="form-grid three">
+        <div class="field">
+          <label for="b-ctc">CTC (LPA) <span class="tip" title="Cost to Company per annum in Lakhs">?</span></label>
+          <input type="number" id="b-ctc" placeholder="e.g. 6" min="1" max="100" step="0.5"/>
+        </div>
+        <div class="field">
+          <label for="b-city">City / Location</label>
+          <select id="b-city">
+            <option value="metro">Metro (Mumbai, Bangalore, Delhi, Hyderabad)</option>
+            <option value="tier2">Tier 2 (Pune, Ahmedabad, Jaipur, etc.)</option>
+            <option value="remote">Remote / Small City</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="b-type">Company Type</label>
+          <select id="b-type">
+            <option value="mnc">MNC / Large Corp</option>
+            <option value="startup">Startup / Mid-size</option>
+            <option value="psu">PSU / Govt</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid" style="margin-top: 16px;">
+        <div class="field">
+          <label for="b-tax-regime">Tax Regime</label>
+          <select id="b-tax-regime">
+            <option value="new">New Regime (Default FY24-25)</option>
+            <option value="old">Old Regime (with 80C & HRA)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="b-pf-included">Employer PF in CTC? <span class="tip" title="Most companies include Employer PF in the quoted CTC.">?</span></label>
+          <select id="b-pf-included">
+            <option value="yes">Yes (Included in CTC)</option>
+            <option value="no">No (Added on top)</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" onclick="calcBreakdown()">Calculate In-Hand →</button>
+    </div>
+
+    <div class="result-box" id="b-result" aria-live="polite">
+      <div class="card-label" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>Monthly Breakdown</span>
+        <button class="export-btn" style="border:1px solid var(--border); background:var(--surface); color:var(--text); padding:4px 10px; font-size:0.7rem; cursor:pointer; border-radius:6px; transition:0.2s;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='var(--surface)'" onclick="exportPDF('b-result', 'OfferSense_Breakdown.pdf')">Export PDF 📄</button>
+      </div>
+      <div id="b-breakdown-rows"></div>
+      <div class="highlight" style="margin-top:20px">
+        <div class="h-label">💵 Estimated Monthly In-Hand</div>
+        <div class="h-value" id="b-inhand">₹0</div>
+        <div class="h-sub" id="b-inhand-sub"></div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="b-chart"></canvas>
+      </div>
+      <div id="b-note" style="font-size:0.78rem; color:var(--text-muted); margin-top:12px; line-height:1.6;"></div>
+    </div>
+  </div>
+
+  <!-- PAGE 2: COMPARE -->
+  <div class="page" id="page-compare" role="tabpanel" aria-labelledby="tab-compare">
+    <div class="page-header">
+      <h1>Offer <span>Comparator</span></h1>
+      <p>Got two offers? See which one actually puts more money in your pocket.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Offer A</div>
+      <div class="form-grid three">
+        <div class="field">
+          <label for="ca-name">Company Name</label>
+          <input type="text" id="ca-name" placeholder="e.g. TCS"/>
+        </div>
+        <div class="field">
+          <label for="ca-ctc">CTC (LPA)</label>
+          <input type="number" id="ca-ctc" placeholder="e.g. 7" step="0.5"/>
+        </div>
+        <div class="field">
+          <label for="ca-var">Variable Pay %</label>
+          <input type="number" id="ca-var" placeholder="e.g. 10" step="5" value="0"/>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="ca-city">Location</label>
+          <select id="ca-city">
+            <option value="metro">Metro</option>
+            <option value="tier2">Tier 2</option>
+            <option value="remote">Remote</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ca-commute">Monthly Commute Cost (₹)</label>
+          <input type="number" id="ca-commute" placeholder="e.g. 3000" step="100" value="3000"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="card section-gap">
+      <div class="card-label">Offer B</div>
+      <div class="form-grid three">
+        <div class="field">
+          <label for="cb-name">Company Name</label>
+          <input type="text" id="cb-name" placeholder="e.g. Infosys"/>
+        </div>
+        <div class="field">
+          <label for="cb-ctc">CTC (LPA)</label>
+          <input type="number" id="cb-ctc" placeholder="e.g. 6" step="0.5"/>
+        </div>
+        <div class="field">
+          <label for="cb-var">Variable Pay %</label>
+          <input type="number" id="cb-var" placeholder="e.g. 20" step="5" value="0"/>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="cb-city">Location</label>
+          <select id="cb-city">
+            <option value="tier2">Tier 2</option>
+            <option value="metro">Metro</option>
+            <option value="remote">Remote</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="cb-commute">Monthly Commute Cost (₹)</label>
+          <input type="number" id="cb-commute" placeholder="e.g. 0" step="100" value="0"/>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn" onclick="compareOffers()">Compare Offers →</button>
+
+    <div class="result-box" id="c-result" aria-live="polite">
+      <div class="card-label" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>Side-by-Side Comparison</span>
+        <button class="export-btn" style="border:1px solid var(--border); background:var(--surface); color:var(--text); padding:4px 10px; font-size:0.7rem; cursor:pointer; border-radius:6px; transition:0.2s;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='var(--surface)'" onclick="exportPDF('c-result', 'OfferSense_Comparison.pdf')">Export PDF 📄</button>
+      </div>
+      <div class="offer-grid" id="c-offer-grid"></div>
+      <div class="chart-wrap" style="margin-top:24px;">
+        <canvas id="c-chart"></canvas>
+      </div>
+      <div id="c-verdict" style="margin-top:20px;"></div>
+    </div>
+  </div>
+
+  <!-- PAGE 3: HIKE -->
+  <div class="page" id="page-hike" role="tabpanel" aria-labelledby="tab-hike">
+    <div class="page-header">
+      <h1>Increment <span>Simulator</span></h1>
+      <p>Confused between 20% hike and 2x salary? We'll clear it up.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Your Current Salary</div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="h-current">Current CTC (LPA)</label>
+          <input type="number" id="h-current" placeholder="e.g. 4" step="0.5"/>
+        </div>
+        <div class="field">
+          <label for="h-type">Hike Type</label>
+          <select id="h-type" onchange="toggleHikeInput()">
+            <option value="percent">Percentage (e.g. 30%)</option>
+            <option value="multiplier">Multiplier (e.g. 2x, 2.5x)</option>
+            <option value="flat">Flat Amount (e.g. +1.5 LPA)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid" style="margin-top:12px;">
+        <div class="field" id="h-input-field">
+          <label id="h-input-label" for="h-value">Hike Percentage (%)</label>
+          <input type="number" id="h-value" placeholder="e.g. 30" step="0.5"/>
+        </div>
+        <div class="field">
+          <label for="h-city">City</label>
+          <select id="h-city">
+            <option value="metro">Metro</option>
+            <option value="tier2">Tier 2</option>
+            <option value="remote">Remote</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" onclick="calcHike()">Simulate Hike →</button>
+    </div>
+
+    <div class="result-box" id="h-result" aria-live="polite">
+      <div class="card-label" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>Hike Result</span>
+        <button class="export-btn" style="border:1px solid var(--border); background:var(--surface); color:var(--text); padding:4px 10px; font-size:0.7rem; cursor:pointer; border-radius:6px; transition:0.2s;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='var(--surface)'" onclick="exportPDF('h-result', 'OfferSense_Hike.pdf')">Export PDF 📄</button>
+      </div>
+      <div id="h-rows"></div>
+      <div class="offer-grid" style="margin-top:16px;" id="h-compare-cards"></div>
+      <div class="chart-wrap"><canvas id="h-chart"></canvas></div>
+      <div id="h-confusion" class="confusion-box" style="display:none; margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <!-- PAGE 4: INSIGHTS -->
+  <div class="page" id="page-insights" role="tabpanel" aria-labelledby="tab-insights">
+    <div class="page-header">
+      <h1>Salary <span>Insights</span></h1>
+      <p>Average fresher salaries by role — so you know if your offer is fair.</p>
+    </div>
+
+    <div class="insights-grid">
+      <div class="insight-card">
+        <div class="insight-title">💻 Tech Roles</div>
+        <div class="insight-sub">Average fresher CTC (LPA) — India 2024</div>
+        <div class="bar-list" id="tech-bars"></div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-title">📊 Non-Tech Roles</div>
+        <div class="insight-sub">Average fresher CTC (LPA) — India 2024</div>
+        <div class="bar-list" id="nontech-bars"></div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-title">🏢 Company-wise Packages</div>
+        <div class="insight-sub">Mass recruiter fresher CTC (LPA)</div>
+        <div class="bar-list" id="company-bars"></div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-title">📍 City Cost Factor</div>
+        <div class="insight-sub">How much city eats your salary</div>
+        <div class="bar-list" id="city-bars"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <div class="card-label">⚠️ Disclaimer</div>
+      <p style="font-size:0.82rem; color:var(--text-muted); line-height:1.7;">
+        Data sourced from AmbitionBox, Glassdoor, and LinkedIn Salary reports (2023–24). 
+        These are <strong style="color:var(--text)">approximate averages</strong> for freshers with 0–1 year experience. 
+        Actual offers may vary based on college tier, skills, and negotiation.
+      </p>
+    </div>
+  </div>
+
+  <!-- PAGE 5: GLOSSARY -->
+  <div class="page" id="page-glossary" role="tabpanel" aria-labelledby="tab-glossary">
+    <div class="page-header">
+      <h1>Salary <span>Glossary</span></h1>
+      <p>All the confusing terms decoded. Click any card to expand.</p>
+    </div>
+
+    <div class="term-grid" id="glossary-grid"></div>
+  </div>
+
+</div>
+
+<!-- Data and Scripts -->
+<script src="script.js"></script>
+</body>
+</html>
